@@ -51,13 +51,13 @@ let i = 0;
 const levelProgress = +(100 / currentInformation.length).toFixed(2);
 progress.value = levelProgress;
 
-function addinformation(i) {
+function addInformation(i) {
     frontWord.textContent = currentInformation[i].englishWord;
     backWord.textContent = currentInformation[i].russianWord;
     backText.textContent = currentInformation[i].sentence;
 };
 
-addinformation(i);
+addInformation(i);
 
 const next = document.querySelector('#next');
 const back = document.querySelector('#back');
@@ -66,7 +66,7 @@ let curr = 1;
 next.addEventListener('click', function() {
     i++;
     curr++;
-    addinformation(i);
+    addInformation(i);
     currentWord.textContent = curr;
     progress.value += levelProgress;
     back.disabled = false;
@@ -80,7 +80,7 @@ next.addEventListener('click', function() {
 back.addEventListener('click', function() {
     i--;
     curr--;
-    addinformation(i);
+    addInformation(i);
     currentWord.textContent = curr;
     progress.value -= levelProgress;
     next.disabled = false;
@@ -99,7 +99,7 @@ const shuffleWords = document.querySelector('#shuffle-words');
 
 shuffleWords.addEventListener('click', function() {
     mixWords(currentInformation);
-    addinformation(i);
+    addInformation(i);
     localStorage.setItem('mixWords', JSON.stringify(currentInformation));
 });
 
@@ -170,54 +170,68 @@ function addWordStatistics(key, value) {
 
 let statistics = {};
 let rightAnswers = 0;
-let wrongAnwers = 0;
+let wrongAnswers = 0;
+
+function addStatistics(answer) {
+    if (statistics[firstCard.textContent]) {
+        statistics[firstCard.textContent] += 1;
+    } else {
+        statistics[firstCard.textContent] = 1;
+        answer += 1;
+    };
+};
+
+function removeCorrectCards() {
+    firstCard.classList.add("fade-out");
+    secondCard.classList.add("correct");
+    secondCard.classList.add("fade-out");
+};
+
+function completeTesting() {
+    document.querySelector('.motivation').textContent = 'Тестирование завершено!';
+    resultsModal.classList.remove('hidden');
+    time.textContent = timer.textContent;
+};
+
+function renderStats() {
+    Object.entries(statistics).forEach((elem) => {
+        resultsContent.append(addWordStatistics(elem[0], elem[1]));
+    })
+};
+
+function addProgressValue() {
+    examProgress.value += levelProgress;
+    correctPercent.textContent = examProgress.value.toFixed() + '%';
+};
 
 examCards.addEventListener('click', function(event) {
-    let card = event.target.closest('.card');
+    const card = event.target.closest('.card');
 
-    if (flag === false) {
+    if (!flag) {
         card.classList.add('correct');
         firstCard = card;
         firstCardIndex = currentInformation.findIndex((item) => item.englishWord === card.textContent || item.russianWord === card.textContent);
         flag = true;
 
-    } else if (flag === true) {
+    } else {
         secondCard = card;
         secondCardIndex = currentInformation.findIndex((item) => item.englishWord === card.textContent || item.russianWord === card.textContent);
 
-        if (firstCardIndex === secondCardIndex) {
-            firstCard.classList.add("fade-out");
-            secondCard.classList.add("correct");
-            secondCard.classList.add("fade-out");
-            examProgress.value += levelProgress;
+        if (firstCardIndex === secondCardIndex && firstCard !== secondCard) {
+            removeCorrectCards();
+            addStatistics(rightAnswers);
+            addProgressValue();
             localStorage.setItem('examProgress', examProgress.value);
-            correctPercent.textContent = examProgress.value.toFixed() + '%';
-            if (statistics[firstCard.textContent]) {
-                statistics[firstCard.textContent] += 1;
-            } else {
-                statistics[firstCard.textContent] = 1;
-                rightAnswers += 1;
-            };
 
             if (examProgress.value === 100) {
+                renderStats();
                 clearInterval(interval);
-                document.querySelector('.motivation').textContent = 'Тестирование завершено!';
-                resultsModal.classList.remove('hidden');
-                time.textContent = timer.textContent;
+                completeTesting();
                 localStorage.setItem('time', time.textContent);
-                Object.entries(statistics).forEach((elem) => {
-                    resultsContent.append(addWordStatistics(elem[0], elem[1]));
-                });
             };
             flag = false;
-        } else if (firstCardIndex !== secondCardIndex) {
-            if (statistics[firstCard.textContent]) {
-                statistics[firstCard.textContent] += 1;
-
-            } else {
-                statistics[firstCard.textContent] = 1;
-                wrongAnwers += 1;
-            };
+        } else if (firstCardIndex !== secondCardIndex || firstCard === secondCard) {
+            addStatistics(wrongAnswers);
             flag = false;
             secondCard.classList.add("wrong");
 
@@ -225,8 +239,8 @@ examCards.addEventListener('click', function(event) {
                 firstCard.classList.remove("correct");
                 secondCard.classList.remove("wrong");
             }, 500);
-        }
+        };
         localStorage.setItem('rightAnswers', rightAnswers);
-        localStorage.setItem('wrongAnwers', wrongAnwers);
+        localStorage.setItem('wrongAnwers', wrongAnswers);
     }
 });
